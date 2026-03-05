@@ -11,31 +11,41 @@ import org.springframework.web.client.RestTemplate;
 
 @Service
 public class EphemerisOllamaService {
-	
+
 	private final RestTemplate restTemplate;
-	
+
 	public EphemerisOllamaService(RestTemplate restTemplate) {
-	    this.restTemplate = restTemplate;
+		this.restTemplate = restTemplate;
 	}
 
-    private final String URL = "http://localhost:11434/api/generate";
+	private final String URL = "http://localhost:11434/api/generate";
 
-    public String askOllama(String question) {
+	public String askOllama(String question) {
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
 
-        Map<String, Object> body = Map.of(
-            "model", "llama3",
-            "prompt", "Você é um assistente que responde perguntas sobre o que aconteceu nesse dia em diferentes anos no mundo.\nPergunta: " + question,
-            "stream", false
-        );
+		String prompt = """
+				Liste eventos históricos que aconteceram no dia %s.
 
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+				Responda SOMENTE em JSON no formato:
 
-        ResponseEntity<Map> response =
-                restTemplate.postForEntity(URL, request, Map.class);
+				[
+				  {
+				    "title": "titulo do evento",
+				    "date": "AAAA-MM-DD",
+				    "description": "descrição do evento",
+				    "analysis": "análise da importância histórica"
+				  }
+				]
+				""".formatted(question);
 
-        return response.getBody().get("response").toString();
-    }
+		Map<String, Object> body = Map.of("model", "llama3", "prompt", prompt, "stream", false, "format", "json");
+
+		HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+
+		ResponseEntity<Map> response = restTemplate.postForEntity(URL, request, Map.class);
+
+		return response.getBody().get("response").toString();
+	}
 }
